@@ -68,10 +68,16 @@ func executeCommand(args Args, todoList *todo.Todos) {
 			}
 			dueDate = &parsedDate
 		}
-		priority, err := todo.ParsePriority(args.Priority)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid priority: %s. Use low, medium, or high.\n", args.Priority)
-			os.Exit(1)
+		var priority todo.Priority
+		var err error
+		if args.Priority != "" {
+			priority, err = todo.ParsePriority(args.Priority)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Invalid priority: %s. Use low, medium, or high.\n", args.Priority)
+				os.Exit(1)
+			}
+		} else {
+			priority = todo.Low // Default priority
 		}
 		commands.AddCommand([]string{task}, dueDate, priority, todoList)
 	} else if args.Complete > 0 {
