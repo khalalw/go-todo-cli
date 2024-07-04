@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -33,12 +34,16 @@ func TestMain(m *testing.M) {
 
 func TestAddCommand(t *testing.T) {
 	todos := &todo.Todos{}
-	AddCommand([]string{"Test task"}, todos)
+	dueDate := time.Now().AddDate(0, 0, 1) // Tomorrow
+	AddCommand([]string{"Test task"}, &dueDate, todos)
 	if len(*todos) != 1 {
 		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
 	if (*todos)[0].Task != "Test task" {
 		t.Errorf("Expected task 'Test task', got '%s'", (*todos)[0].Task)
+	}
+	if (*todos)[0].DueDate == nil || !(*todos)[0].DueDate.Equal(dueDate) {
+		t.Errorf("Expected due date '%s', got '%v'", dueDate.Format("2006-01-02"), (*todos)[0].DueDate)
 	}
 }
 

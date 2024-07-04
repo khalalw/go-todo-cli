@@ -6,6 +6,7 @@ import (
 	"go-todo-cli/internal/commands"
 	"go-todo-cli/internal/todo"
 	"os"
+	"time"
 )
 
 const defaultFileToWrite = "todos.json"
@@ -13,6 +14,7 @@ const defaultFileToWrite = "todos.json"
 // Args defines the command-line arguments structure
 type Args struct {
 	Add      string `arg:"-a,--add,help:Add a task to the TODO list"`
+	DueDate  string `arg:"-d,--due,help:Set a due date for the task (format: YYYY-MM-DD)"`
 	Complete int    `arg:"-c,--complete,help:Mark a task as complete"`
 	Delete   int    `arg:"-d,--delete,help:Delete a task"`
 	List     bool   `arg:"-l,--list,help:List all tasks"`
@@ -53,7 +55,16 @@ func handleFileLoading(todoList *todo.Todos, filename string) {
 // executeCommand executes the appropriate command based on the provided arguments
 func executeCommand(args Args, todoList *todo.Todos) {
 	if args.Add != "" {
-		commands.AddCommand([]string{args.Add}, todoList)
+		var dueDate *time.Time
+		if args.DueDate != "" {
+			parsedDate, err := time.Parse("2006-01-02", args.DueDate)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Invalid date format: %s. Use YYYY-MM-DD.\n", args.DueDate)
+				os.Exit(1)
+			}
+			dueDate = &parsedDate
+		}
+		commands.AddCommand([]string{args.Add}, dueDate, todoList)
 	} else if args.Complete > 0 {
 		commands.CompleteCommand([]string{fmt.Sprint(args.Complete)}, todoList)
 	} else if args.Delete > 0 {

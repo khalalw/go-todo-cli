@@ -3,16 +3,21 @@ package todo
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 func TestAdd(t *testing.T) {
 	todos := &Todos{}
-	todos.Add("Test task")
+	dueDate := time.Now().AddDate(0, 0, 1) // Tomorrow
+	todos.Add("Test task", &dueDate)
 	if len(*todos) != 1 {
 		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
 	if (*todos)[0].Task != "Test task" {
 		t.Errorf("Expected 'Test task', got '%s'", (*todos)[0].Task)
+	}
+	if (*todos)[0].DueDate == nil || !(*todos)[0].DueDate.Equal(dueDate) {
+		t.Errorf("Expected due date '%s', got '%v'", dueDate.Format("2006-01-02"), (*todos)[0].DueDate)
 	}
 }
 

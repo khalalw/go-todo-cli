@@ -6,17 +6,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var FileToWrite = "todos.json"
 
 // AddCommand adds a new task to the TODO list
-func AddCommand(args []string, todoList *todo.Todos) {
+func AddCommand(args []string, dueDate *time.Time, todoList *todo.Todos) {
 	if len(args) < 1 {
 		fmt.Println("Usage: add <task>")
 		return
 	}
-	todoList.Add(strings.Join(args, " "))
+	todoList.Add(strings.Join(args, " "), dueDate)
 	fmt.Println("Task added.")
 	saveTodoList(todoList)
 }
