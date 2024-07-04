@@ -27,7 +27,8 @@ func TestMain(m *testing.M) {
 func TestAddCommand(t *testing.T) {
 	todos := &todo.Todos{}
 	dueDate := time.Now().AddDate(0, 0, 1) // Tomorrow
-	AddCommand([]string{"Test task"}, &dueDate, todo.High, todos)
+	tags := []string{"work", "urgent"}
+	AddCommand([]string{"Test task"}, &dueDate, todo.High, todos, tags)
 	if len(*todos) != 1 {
 		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
@@ -40,6 +41,9 @@ func TestAddCommand(t *testing.T) {
 	if (*todos)[0].Priority != todo.High {
 		t.Errorf("Expected priority 'high', got '%s'", (*todos)[0].Priority)
 	}
+	if len((*todos)[0].Tags) != 2 || (*todos)[0].Tags[0] != "work" || (*todos)[0].Tags[1] != "urgent" {
+		t.Errorf("Expected tags [work urgent], got %v", (*todos)[0].Tags)
+	}
 }
 
 func TestCompleteCommand(t *testing.T) {
@@ -48,6 +52,12 @@ func TestCompleteCommand(t *testing.T) {
 	if !(*todos)[0].Completed {
 		t.Error("CompleteCommand failed to mark task as complete")
 	}
+
+	// Test invalid task number
+	CompleteCommand([]string{"2"}, todos)
+	if len(*todos) != 1 {
+		t.Error("CompleteCommand should not add new tasks")
+	}
 }
 
 func TestDeleteCommand(t *testing.T) {
@@ -55,6 +65,13 @@ func TestDeleteCommand(t *testing.T) {
 	DeleteCommand([]string{"1"}, todos)
 	if len(*todos) != 0 {
 		t.Errorf("Expected 0 todos after deletion, got %d", len(*todos))
+	}
+
+	// Test invalid task number
+	todos = &todo.Todos{{Task: "Test task"}}
+	DeleteCommand([]string{"2"}, todos)
+	if len(*todos) != 1 {
+		t.Error("DeleteCommand should not remove tasks for invalid numbers")
 	}
 }
 
@@ -141,27 +158,31 @@ func TestEditCommand(t *testing.T) {
 		expectedTask     string
 		expectedDueDate  string
 		expectedPriority todo.Priority
+		expectedTags     []string
 	}{
 		{
 			name:             "Edit all fields",
-			input:            "New task description\n2023-07-01\nhigh\n",
+			input:            "New task description\n2023-07-01\nhigh\nwork,urgent\n",
 			expectedTask:     "New task description",
 			expectedDueDate:  "2023-07-01",
 			expectedPriority: todo.High,
+			expectedTags:     []string{"work", "urgent"},
 		},
 		{
 			name:             "Keep original values",
-			input:            "\n\n\n",
+			input:            "\n\n\n\n",
 			expectedTask:     "Original task",
 			expectedDueDate:  "",
 			expectedPriority: todo.Low,
+			expectedTags:     []string{},
 		},
 		{
 			name:             "Edit task only",
-			input:            "Updated task\n\n\n",
+			input:            "Updated task\n\n\n\n",
 			expectedTask:     "Updated task",
 			expectedDueDate:  "",
 			expectedPriority: todo.Low,
+			expectedTags:     []string{},
 		},
 	}
 
@@ -169,7 +190,7 @@ func TestEditCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new todos slice for each test case
 			todos := &todo.Todos{
-				{Task: "Original task", DueDate: nil, Priority: todo.Low},
+				{Task: "Original task", DueDate: nil, Priority: todo.Low, Tags: []string{}},
 			}
 
 			// Create pipes for input and output
@@ -212,10 +233,113 @@ func TestEditCommand(t *testing.T) {
 				t.Errorf("Expected priority '%v', got '%v'", tt.expectedPriority, (*todos)[0].Priority)
 			}
 
+			if !stringSlicesEqual((*todos)[0].Tags, tt.expectedTags) {
+				t.Errorf("Expected tags %v, got %v", tt.expectedTags, (*todos)[0].Tags)
+			}
+
 			// Check the output if needed
 			if !strings.Contains(output.String(), "Task updated successfully") {
 				t.Errorf("Expected output to contain 'Task updated successfully', got '%s'", output.String())
 			}
 		})
 	}
+}
+
+func TestAddTagCommand(t *testing.T) {
+	todos := &todo.Todos{{Task: "Test task", Tags: []string{"existing"}}}
+
+	// Test adding a new tag
+	AddTagCommand([]string{"1", "newtag"}, todos)
+	if len((*todos)[0].Tags) != 2 || (*todos)[0].Tags[1] != "newtag" {
+		t.Errorf("Expected 2 tags with 'newtag' added, got %v", (*todos)[0].Tags)
+	}
+
+	// Test adding an existing tag
+	AddTagCommand([]string{"1", "existing"}, todos)
+	if len((*todos)[0].Tags) != 2 {
+		t.Errorf("Expected no change when adding existing tag, got %v", (*todos)[0].Tags)
+	}
+
+	// Test invalid task number
+	AddTagCommand([]string{"999", "tag"}, todos)
+	if len((*todos)[0].Tags) != 2 {
+		t.Errorf("Expected no change for invalid task number, got %v", (*todos)[0].Tags)
+	}
+}
+
+func TestRemoveTagCommand(t *testing.T) {
+	todos := &todo.Todos{{Task: "Test task", Tags: []string{"tag1", "tag2"}}}
+
+	// Test removing an existing tag
+	RemoveTagCommand([]string{"1", "tag1"}, todos)
+	if len((*todos)[0].Tags) != 1 || (*todos)[0].Tags[0] != "tag2" {
+		t.Errorf("Expected 1 tag 'tag2' remaining, got %v", (*todos)[0].Tags)
+	}
+
+	// Test removing a non-existent tag
+	RemoveTagCommand([]string{"1", "nonexistent"}, todos)
+	if len((*todos)[0].Tags) != 1 {
+		t.Errorf("Expected no change when removing non-existent tag, got %v", (*todos)[0].Tags)
+	}
+
+	// Test invalid task number
+	RemoveTagCommand([]string{"999", "tag2"}, todos)
+	if len((*todos)[0].Tags) != 1 {
+		t.Errorf("Expected no change for invalid task number, got %v", (*todos)[0].Tags)
+	}
+}
+
+func TestFilterByTagCommand(t *testing.T) {
+	todos := &todo.Todos{
+		{Task: "Task 1", Tags: []string{"work", "urgent"}},
+		{Task: "Task 2", Tags: []string{"personal"}},
+		{Task: "Task 3", Tags: []string{"work"}},
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	FilterByTagCommand([]string{"work"}, todos)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	output := buf.String()
+	if !strings.Contains(output, "Task 1") || !strings.Contains(output, "Task 3") || strings.Contains(output, "Task 2") {
+		t.Errorf("FilterByTagCommand failed to filter tasks correctly")
+	}
+
+	// Test non-existent tag
+	r, w, _ = os.Pipe()
+	os.Stdout = w
+
+	FilterByTagCommand([]string{"nonexistent"}, todos)
+
+	w.Close()
+	os.Stdout = old
+
+	buf.Reset()
+	io.Copy(&buf, r)
+
+	output = buf.String()
+	if !strings.Contains(output, "No tasks found with tag 'nonexistent'") {
+		t.Errorf("FilterByTagCommand failed to handle non-existent tag correctly")
+	}
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

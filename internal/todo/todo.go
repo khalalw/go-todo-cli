@@ -21,7 +21,7 @@ func (p Priority) String() string {
 }
 
 func ParsePriority(s string) (Priority, error) {
-	switch s {
+	switch strings.ToLower(s) {
 	case "low":
 		return Low, nil
 	case "medium":
@@ -38,16 +38,16 @@ type Todo struct {
 	Completed bool
 	DueDate   *time.Time `json:",omitempty"`
 	Priority  Priority   `json:",omitempty"`
+	Tags      []string   `json:",omitempty"`
 }
 
 type Todos []Todo
 
-func (t *Todos) Add(task string, dueDate *time.Time, priority Priority) {
-	todo := Todo{Task: task, Completed: false, DueDate: dueDate, Priority: priority}
+func (t *Todos) Add(task string, dueDate *time.Time, priority Priority, tags []string) {
+	todo := Todo{Task: task, Completed: false, DueDate: dueDate, Priority: priority, Tags: tags}
 	*t = append(*t, todo)
 }
 
-// Complete marks a task as complete
 func (t *Todos) Complete(index int) error {
 	if index < 0 || index >= len(*t) {
 		return fmt.Errorf("index out of range")
@@ -65,7 +65,7 @@ func (t *Todos) Delete(index int) error {
 }
 
 func (t *Todos) Save(filename string) error {
-	data, err := json.MarshalIndent(t, "", " ")
+	data, err := json.MarshalIndent(t, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,6 @@ func Print(todos *Todos) {
 		return
 	}
 
-	// Find the longest task for proper spacing
 	maxTaskLength := 0
 	for _, todo := range *todos {
 		if len(todo.Task) > maxTaskLength {
@@ -94,12 +93,13 @@ func Print(todos *Todos) {
 		}
 	}
 
-	// Print header
-	fmt.Println(strings.Repeat("-", maxTaskLength+50))
-	fmt.Printf("| %-3s | %-*s | %-10s | %-8s | %-6s |\n", "No.", maxTaskLength, "Task", "Due Date", "Priority", "Status")
-	fmt.Println(strings.Repeat("-", maxTaskLength+50))
+	format := "| %-3d | %-*s | %-10s | %-8s | %-6s | %-20s |\n"
+	divider := strings.Repeat("-", maxTaskLength+60)
 
-	// Print tasks
+	fmt.Println(divider)
+	fmt.Printf(format, 0, maxTaskLength, "Task", "Due Date", "Priority", "Status", "Tags")
+	fmt.Println(divider)
+
 	for i, todo := range *todos {
 		status := "Pending"
 		if todo.Completed {
@@ -111,9 +111,13 @@ func Print(todos *Todos) {
 			dueDate = todo.DueDate.Format("2006-01-02")
 		}
 
-		fmt.Printf("| %-3d | %-*s | %-10s | %-8s | %-6s |\n",
-			i+1, maxTaskLength, todo.Task, dueDate, todo.Priority, status)
+		tags := "None"
+		if len(todo.Tags) > 0 {
+			tags = strings.Join(todo.Tags, ", ")
+		}
+
+		fmt.Printf(format, i+1, maxTaskLength, todo.Task, dueDate, todo.Priority, status, tags)
 	}
 
-	fmt.Println(strings.Repeat("-", maxTaskLength+50))
+	fmt.Println(divider)
 }
