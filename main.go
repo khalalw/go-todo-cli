@@ -10,20 +10,41 @@ import (
 const fileToWrite = "todos.json"
 
 func main() {
-	// -add, -complete, -delete, -list
-	add := flag.String("add", "", "Task to add to the TODO list")
-	complete := flag.Int("complete", -1, "Task number to mark as complete")
-	del := flag.Int("delete", -1, "Task number to delete")
-	list := flag.Bool("list", false, "List all tasks")
-	flag.Parse()
+	// Parse command-line flags
+	add, complete, del, list := parseFlags()
 
-	// Initialize the todo list
+	// Initialize an empty todo list
 	todoList := &todo.Todos{}
-	// Load todos with error handling
-	if err := todoList.Load(fileToWrite); err != nil {
+
+	// Load existing todos from file or create a new file if it doesn't exist
+	handleFileLoading(todoList, fileToWrite)
+
+	// Execute the appropriate command based on the flags provided
+	executeCommand(add, complete, del, list, todoList)
+
+	// Save the updated todo list to the file
+	if err := todoList.Save(fileToWrite); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+// parseFlags parses command-line flags and returns pointers to the flag values
+func parseFlags() (add *string, complete *int, del *int, list *bool) {
+	add = flag.String("add", "", "Task to add to the TODO list")
+	complete = flag.Int("complete", -1, "Task number to mark as complete")
+	del = flag.Int("delete", -1, "Task number to delete")
+	list = flag.Bool("list", false, "List all tasks")
+	flag.Parse()
+	return
+}
+
+// handleFileLoading loads the todo list from a file or creates a new file if it doesn't exist
+func handleFileLoading(todoList *todo.Todos, filename string) {
+	if err := todoList.Load(filename); err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("File not found, creating a new todos.json file.")
-			if err := todoList.Save(fileToWrite); err != nil {
+			if err := todoList.Save(filename); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
@@ -32,7 +53,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
 
+// executeCommand executes the command based on the parsed flags
+func executeCommand(add *string, complete *int, del *int, list *bool, todoList *todo.Todos) {
 	switch {
 	case *add != "":
 		todoList.Add(*add)
@@ -54,12 +78,6 @@ func main() {
 	default:
 		fmt.Fprintln(os.Stderr, "Invalid command")
 		flag.Usage()
-		os.Exit(1)
-	}
-
-	// Save changes after adding
-	if err := todoList.Save(fileToWrite); err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
