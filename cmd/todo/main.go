@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const defaultFileToWrite = "todos.json"
+var defaultFileToWrite = "todos.json"
 
 // Args defines the command-line arguments structure
 type Args struct {
@@ -32,76 +32,100 @@ func main() {
 	var args Args
 	arg.MustParse(&args)
 
-	todoList := &todo.Todos{}
-	handleFileLoading(todoList, defaultFileToWrite)
-
-	executeCommand(args, todoList)
-
-	if err := todoList.Save(defaultFileToWrite); err != nil {
-		fmt.Fprintln(os.Stderr, "Error saving go-todo-cli list:", err)
+	_, err := parseArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func handleFileLoading(todoList *todo.Todos, filename string) {
+func parseArgs(args Args) (todo.Todos, error) {
+	todoList := &todo.Todos{}
+	err := handleFileLoading(todoList, defaultFileToWrite)
+	if err != nil {
+		return *todoList, err
+	}
+
+	err = executeCommand(args, todoList)
+	if err != nil {
+		return *todoList, err
+	}
+
+	return *todoList, todoList.Save(defaultFileToWrite)
+}
+
+func handleFileLoading(todoList *todo.Todos, filename string) error {
 	if err := todoList.Load(filename); err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("File not found, creating a new todos.json file.")
-			if err := todoList.Save(filename); err != nil {
-				fmt.Fprintln(os.Stderr, "Error creating new go-todo-cli file:", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, "Error loading go-todo-cli file:", err)
-			os.Exit(1)
+			return todoList.Save(filename)
 		}
+		return fmt.Errorf("error loading go-todo-cli file: %w", err)
 	}
+	return nil
 }
 
-func executeCommand(args Args, todoList *todo.Todos) {
-	if len(args.Add) > 0 {
-		task := strings.Join(args.Add, " ")
-		var dueDate *time.Time
-		if args.DueDate != "" {
-			parsedDate, err := time.Parse("2006-01-02", args.DueDate)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Invalid date format: %s. Use YYYY-MM-DD.\n", args.DueDate)
-				os.Exit(1)
-			}
-			dueDate = &parsedDate
-		}
-		var priority todo.Priority
-		var err error
-		if args.Priority != "" {
-			priority, err = todo.ParsePriority(args.Priority)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Invalid priority: %s. Use low, medium, or high.\n", args.Priority)
-				os.Exit(1)
-			}
-		} else {
-			priority = todo.Low // Default priority
-		}
-		tags := parseTags(args.Tags)
-		commands.AddCommand([]string{task}, dueDate, priority, todoList, tags)
-	} else if args.Complete > 0 {
+func executeCommand(args Args, todoList *todo.Todos) error {
+	switch {
+	case len(args.Add) > 0:
+		return handleAddCommand(args, todoList)
+	case args.Complete > 0:
 		commands.CompleteCommand([]string{fmt.Sprint(args.Complete)}, todoList)
-	} else if args.Delete > 0 {
+	case args.Delete > 0:
 		commands.DeleteCommand([]string{fmt.Sprint(args.Delete)}, todoList)
-	} else if args.List {
+	case args.List:
 		commands.ListCommand(todoList)
-	} else if args.Clear {
+	case args.Clear:
 		commands.ClearTasksCommand(todoList)
-	} else if args.Edit > 0 {
+	case args.Edit > 0:
 		commands.EditCommand(args.Edit, todoList)
-	} else if len(args.AddTag) == 2 {
+	case len(args.AddTag) == 2:
 		commands.AddTagCommand(args.AddTag, todoList)
-	} else if len(args.RemoveTag) == 2 {
+	case len(args.RemoveTag) == 2:
 		commands.RemoveTagCommand(args.RemoveTag, todoList)
-	} else if args.FilterTag != "" {
+	case args.FilterTag != "":
 		commands.FilterByTagCommand([]string{args.FilterTag}, todoList)
-	} else {
-		fmt.Fprintln(os.Stderr, "Invalid command. Use --help for usage information.")
+	default:
+		return fmt.Errorf("invalid command. Use --help for usage information")
 	}
+	return nil
+}
+
+func handleAddCommand(args Args, todoList *todo.Todos) error {
+	task := strings.Join(args.Add, " ")
+	dueDate, err := parseDueDate(args.DueDate)
+	if err != nil {
+		return err
+	}
+	priority, err := parsePriority(args.Priority)
+	if err != nil {
+		return err
+	}
+	tags := parseTags(args.Tags)
+	commands.AddCommand([]string{task}, dueDate, priority, todoList, tags)
+	return nil
+}
+
+func parseDueDate(dateStr string) (*time.Time, error) {
+	if dateStr == "" {
+		return nil, nil
+	}
+	parsedDate, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format: %s. Use YYYY-MM-DD", dateStr)
+	}
+	return &parsedDate, nil
+}
+
+func parsePriority(priorityStr string) (todo.Priority, error) {
+	if priorityStr == "" {
+		return todo.Low, nil
+	}
+	priority, err := todo.ParsePriority(priorityStr)
+	if err != nil {
+		return todo.Low, fmt.Errorf("invalid priority: %s. Use low, medium, or high", priorityStr)
+	}
+	return priority, nil
 }
 
 func parseTags(tagString string) []string {
