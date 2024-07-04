@@ -3,7 +3,7 @@
 # Variables
 BINARY_NAME = todo-cli
 CMD_DIR = ./cmd/todo-cli
-INTERNAL_DIRS = ./internal/shell ./internal/commands ./internal/utils
+INTERNAL_DIRS = ./internal/shell ./internal/commands
 PKG_DIR = ./pkg/todo
 
 # Build the binary
