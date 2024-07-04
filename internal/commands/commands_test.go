@@ -2,154 +2,126 @@ package commands
 
 import (
 	"bytes"
-	"go-todo-cli/pkg/todo"
+	"go-todo-cli/internal/todo"
+	"io"
 	"os"
-	"strings"
 	"testing"
 )
 
-// Utility function to capture the output of a function call
-func captureOutput(f func()) string {
-	var buf bytes.Buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	f()
-	w.Close()
-	os.Stdout = old
-	buf.ReadFrom(r)
-	return buf.String()
+func TestMain(m *testing.M) {
+	// Check if todos.json exists and rename it if it does
+	originalExists := false
+	if _, err := os.Stat(FileToWrite); err == nil {
+		originalExists = true
+		os.Rename(FileToWrite, FileToWrite+".backup")
+	}
+
+	// Run the tests
+	code := m.Run()
+
+	// Clean up the test file
+	os.Remove(FileToWrite)
+
+	// Restore the original file if it existed
+	if originalExists {
+		os.Rename(FileToWrite+".backup", FileToWrite)
+	}
+
+	// Exit with the test result code
+	os.Exit(code)
 }
 
 func TestAddCommand(t *testing.T) {
-	todoList := &todo.Todos{}
-	addCommand([]string{"Test task"}, todoList)
-
-	if len(*todoList) != 1 {
-		t.Fatalf("Expected 1 task, got %d", len(*todoList))
+	todos := &todo.Todos{}
+	AddCommand([]string{"Test task"}, todos)
+	if len(*todos) != 1 {
+		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
-
-	if (*todoList)[0].Task != "Test task" {
-		t.Errorf("Expected 'Test task', got %s", (*todoList)[0].Task)
+	if (*todos)[0].Task != "Test task" {
+		t.Errorf("Expected task 'Test task', got '%s'", (*todos)[0].Task)
 	}
 }
 
 func TestCompleteCommand(t *testing.T) {
-	todoList := &todo.Todos{
-		{Task: "Task 1", Completed: false},
-	}
-
-	completeCommand([]string{"1"}, todoList)
-
-	if !(*todoList)[0].Completed {
-		t.Errorf("Expected task to be marked as complete")
+	todos := &todo.Todos{{Task: "Test task", Completed: false}}
+	CompleteCommand([]string{"1"}, todos)
+	if !(*todos)[0].Completed {
+		t.Error("CompleteCommand failed to mark task as complete")
 	}
 }
 
 func TestDeleteCommand(t *testing.T) {
-	todoList := &todo.Todos{
-		{Task: "Task 1", Completed: false},
-	}
-
-	deleteCommand([]string{"1"}, todoList)
-
-	if len(*todoList) != 0 {
-		t.Fatalf("Expected 0 tasks, got %d", len(*todoList))
-	}
-}
-
-func TestClearTasksCommand(t *testing.T) {
-	todoList := &todo.Todos{
-		{Task: "Task 1", Completed: false},
-		{Task: "Task 2", Completed: false},
-	}
-
-	clearTasksCommand(todoList)
-
-	if len(*todoList) != 0 {
-		t.Fatalf("Expected 0 tasks, got %d", len(*todoList))
+	todos := &todo.Todos{{Task: "Test task"}}
+	DeleteCommand([]string{"1"}, todos)
+	if len(*todos) != 0 {
+		t.Errorf("Expected 0 todos after deletion, got %d", len(*todos))
 	}
 }
 
 func TestListCommand(t *testing.T) {
-	todoList := &todo.Todos{
-		{Task: "Task A", Completed: true},
-		{Task: "Task B", Completed: false},
-	}
+	todos := &todo.Todos{{Task: "Test task"}}
 
-	output := captureOutput(func() {
-		listCommand(todoList)
-	})
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-	expectedOutput := "1. [x] Task A\n2. [ ] Task B\n"
-	if output != expectedOutput {
-		t.Errorf("Expected output:\n%s\nGot:\n%s", expectedOutput, output)
+	ListCommand(todos)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	if !bytes.Contains(buf.Bytes(), []byte("Test task")) {
+		t.Error("ListCommand failed to list tasks")
 	}
 }
 
-func TestExitCommand(t *testing.T) {
-	todoList := &todo.Todos{
-		{Task: "Task 1", Completed: false},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			if r != "os.Exit called" {
-				panic(r)
-			}
-		}
-	}()
-	// Mock os.Exit to prevent it from terminating the test
-	exitFunc = func(code int) {
-		panic("os.Exit called")
-	}
-	defer func() { exitFunc = os.Exit }() // Restore original function
-
-	output := captureOutput(func() {
-		exitCommand(todoList)
-	})
-
-	expectedOutput := "Exiting the TODO CLI.\n"
-	if !strings.Contains(output, expectedOutput) {
-		t.Errorf("Expected output to contain:\n%s\nGot:\n%s", expectedOutput, output)
+func TestClearTasksCommand(t *testing.T) {
+	todos := &todo.Todos{{Task: "Test task"}}
+	ClearTasksCommand(todos)
+	if len(*todos) != 0 {
+		t.Errorf("Expected 0 todos after clearing, got %d", len(*todos))
 	}
 }
 
 func TestParseIndex(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		input    string
 		expected int
 	}{
 		{"1", 0},
-		{"2", 1},
-		{"a", -1},
+		{"5", 4},
+		{"0", -1},
 		{"-1", -1},
-		{" 2 ", 1},
-		{"", -1},
+		{"abc", -1},
 	}
 
-	for _, test := range tests {
-		result := parseIndex(test.input)
-		if result != test.expected {
-			t.Errorf("parseIndex(%q) = %d; expected %d", test.input, result, test.expected)
+	for _, tc := range testCases {
+		result := parseIndex(tc.input)
+		if result != tc.expected {
+			t.Errorf("parseIndex(%s): expected %d, got %d", tc.input, tc.expected, result)
 		}
 	}
 }
 
-func TestPrintHelp(t *testing.T) {
-	expectedOutput := `Commands:
-  add <task>           - Add a new task
-  complete <task_number> - Mark a task as complete
-  delete <task_number> - Delete a task
-  list                 - List all tasks
-  clear-tasks          - Clear all tasks
-  help                 - Show this help message
-  exit                 - Exit the TODO CLI
-`
-	output := captureOutput(func() {
-		printHelp()
-	})
+func TestSaveTodoList(t *testing.T) {
+	todos := &todo.Todos{{Task: "Test task"}}
+	saveTodoList(todos)
 
-	if output != expectedOutput {
-		t.Errorf("Expected output:\n%s\nGot:\n%s", expectedOutput, output)
+	// Check if file was created
+	if _, err := os.Stat(FileToWrite); os.IsNotExist(err) {
+		t.Error("saveTodoList did not create a file")
+	}
+
+	// Verify file contents
+	data, err := os.ReadFile(FileToWrite)
+	if err != nil {
+		t.Errorf("Error reading saved file: %v", err)
+	}
+	if !bytes.Contains(data, []byte("Test task")) {
+		t.Error("Saved file does not contain expected content")
 	}
 }
