@@ -21,8 +21,16 @@ func main() {
 	todoList := &todo.Todos{}
 	// Load todos with error handling
 	if err := todoList.Load(fileToWrite); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if os.IsNotExist(err) {
+			fmt.Println("File not found, creating a new todos.json file.")
+			if err := todoList.Save(fileToWrite); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 
 	switch {
