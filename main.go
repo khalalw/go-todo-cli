@@ -17,40 +17,40 @@ func main() {
 	list := flag.Bool("list", false, "List all tasks")
 	flag.Parse()
 
-	// initialize todolist
-	todos := &todo.Todos{}
-	// load todos with error handling
-	if err := todos.Load(fileToWrite); err != nil {
+	// Initialize the todo list
+	todoList := &todo.Todos{}
+	// Load todos with error handling
+	if err := todoList.Load(fileToWrite); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	switch {
 	case *add != "":
-		todos.Add(*add)
-		fmt.Printf("Added task %s\n, length = %d", *add, len(*todos))
+		todoList.Add(*add)
+		fmt.Printf("Added task: %s, length = %d\n", *add, len(*todoList))
 	case *complete >= 0:
-		if err := todos.Complete(*complete - 1); err != nil {
+		if err := todoList.Complete(*complete - 1); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Printf("Marked task %d as complete", *complete)
+		fmt.Printf("Marked task %d as complete\n", *complete)
 	case *del >= 0:
-		if err := todos.Delete(*del - 1); err != nil {
+		if err := todoList.Delete(*del - 1); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		fmt.Printf("Deleted task %d\n", *del)
 	case *list:
-		todo.Print(todos)
+		todo.Print(todoList)
 	default:
 		fmt.Fprintln(os.Stderr, "Invalid command")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	// save changes after adding
-	if err := todos.Save(fileToWrite); err != nil {
+	// Save changes after adding
+	if err := todoList.Save(fileToWrite); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

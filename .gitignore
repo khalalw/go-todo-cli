@@ -27,10 +27,6 @@ vendor/
 go.work
 go.work.sum
 
-# Go modules
-/go.mod
-/go.sum
-
 # Temporary build directories
 /_build/
 /build/
