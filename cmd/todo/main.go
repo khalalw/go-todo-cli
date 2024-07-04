@@ -21,6 +21,7 @@ type Args struct {
 	Delete   int      `arg:"-r,--delete" help:"Delete a task"`
 	List     bool     `arg:"-l,--list" help:"List all tasks"`
 	Clear    bool     `arg:"-x,--clear-tasks" help:"Clear all tasks"`
+	Edit     int      `arg:"-e,--edit" help:"Edit a task"`
 }
 
 func main() {
@@ -81,6 +82,8 @@ func executeCommand(args Args, todoList *todo.Todos) {
 		commands.ListCommand(todoList)
 	} else if args.Clear {
 		commands.ClearTasksCommand(todoList)
+	} else if args.Edit > 0 {
+		commands.EditCommand(args.Edit, todoList)
 	} else {
 		fmt.Fprintln(os.Stderr, "Invalid command. Use --help for usage information.")
 	}

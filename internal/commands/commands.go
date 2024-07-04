@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
 	"go-todo-cli/internal/todo"
 	"os"
@@ -69,6 +70,63 @@ func ListCommand(todoList *todo.Todos) {
 func ClearTasksCommand(todoList *todo.Todos) {
 	*todoList = todo.Todos{}
 	fmt.Println("All tasks cleared.")
+	saveTodoList(todoList)
+}
+
+// EditCommand allows editing an existing task
+func EditCommand(taskNumber int, todoList *todo.Todos) {
+	index := taskNumber - 1
+	if index < 0 || index >= len(*todoList) {
+		fmt.Println("Invalid task number.")
+		return
+	}
+
+	task := &(*todoList)[index]
+	reader := bufio.NewReader(os.Stdin)
+
+	// Edit task description
+	fmt.Printf("Current task: %s\nEnter new task description (or press Enter to keep current): ", task.Task)
+	newTask, _ := reader.ReadString('\n')
+	newTask = strings.TrimSpace(newTask)
+	if newTask != "" {
+		task.Task = newTask
+	}
+
+	// Edit due date
+	var newDueDate time.Time
+	var err error
+	for {
+		fmt.Printf("Current due date: %v\nEnter new due date (YYYY-MM-DD) or press Enter to keep current: ", task.DueDate)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input == "" {
+			break
+		}
+		newDueDate, err = time.Parse("2006-01-02", input)
+		if err == nil {
+			task.DueDate = &newDueDate
+			break
+		}
+		fmt.Println("Invalid date format. Please use YYYY-MM-DD.")
+	}
+
+	// Edit priority
+	for {
+		fmt.Printf("Current priority: %v\nEnter new priority (low/medium/high) or press Enter to keep current: ", task.Priority)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input == "" {
+			break
+		}
+		newPriority, err := todo.ParsePriority(strings.ToLower(input))
+		if err == nil {
+			task.Priority = newPriority
+			break
+		}
+		fmt.Println("Invalid priority. Please use low, medium, or high.")
+	}
+
+	fmt.Println("Task updated successfully.")
 	saveTodoList(todoList)
 }
 
