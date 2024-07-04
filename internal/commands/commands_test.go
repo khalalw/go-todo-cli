@@ -91,12 +91,20 @@ func TestExitCommand(t *testing.T) {
 	todoList := &todo.Todos{
 		{Task: "Task 1", Completed: false},
 	}
-	output := captureOutput(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				// Prevent os.Exit from terminating the test
+	defer func() {
+		if r := recover(); r != nil {
+			if r != "os.Exit called" {
+				panic(r)
 			}
-		}()
+		}
+	}()
+	// Mock os.Exit to prevent it from terminating the test
+	exitFunc = func(code int) {
+		panic("os.Exit called")
+	}
+	defer func() { exitFunc = os.Exit }() // Restore original function
+
+	output := captureOutput(func() {
 		exitCommand(todoList)
 	})
 

@@ -128,16 +128,13 @@ func TestPrint(t *testing.T) {
 
 // Helper function to capture output
 func captureOutput(f func()) string {
+	var buf bytes.Buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-
 	f()
-
 	w.Close()
 	os.Stdout = old
-
-	var buf bytes.Buffer
 	buf.ReadFrom(r)
 	return buf.String()
 }

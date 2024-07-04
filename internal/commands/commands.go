@@ -10,6 +10,9 @@ import (
 
 const fileToWrite = "todos.json"
 
+// exitFunc is a variable that holds the function to exit the program. By default, it is set to os.Exit.
+var exitFunc = os.Exit
+
 func ExecuteCommand(cmd string, args []string, todoList *todo.Todos) {
 	switch cmd {
 	case "add":
@@ -90,7 +93,7 @@ func clearTasksCommand(todoList *todo.Todos) {
 func exitCommand(todoList *todo.Todos) {
 	fmt.Println("Exiting the TODO CLI.")
 	saveTodoList(todoList)
-	os.Exit(0)
+	exitFunc(0)
 }
 
 func saveTodoList(todoList *todo.Todos) {
