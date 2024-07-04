@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
+	"strings"
 	"time"
 )
 
@@ -81,22 +81,39 @@ func (t *Todos) Load(filename string) error {
 }
 
 func Print(todos *Todos) {
-	sort.Slice(*todos, func(i, j int) bool {
-		if (*todos)[i].Priority == (*todos)[j].Priority {
-			return (*todos)[i].Task < (*todos)[j].Task
-		}
-		return (*todos)[i].Priority > (*todos)[j].Priority
-	})
+	if len(*todos) == 0 {
+		fmt.Println("No tasks. Your todo list is empty.")
+		return
+	}
 
-	for i, todo := range *todos {
-		status := " "
-		if todo.Completed {
-			status = "x"
+	// Find the longest task for proper spacing
+	maxTaskLength := 0
+	for _, todo := range *todos {
+		if len(todo.Task) > maxTaskLength {
+			maxTaskLength = len(todo.Task)
 		}
-		dueDate := ""
+	}
+
+	// Print header
+	fmt.Println(strings.Repeat("-", maxTaskLength+50))
+	fmt.Printf("| %-3s | %-*s | %-10s | %-8s | %-6s |\n", "No.", maxTaskLength, "Task", "Due Date", "Priority", "Status")
+	fmt.Println(strings.Repeat("-", maxTaskLength+50))
+
+	// Print tasks
+	for i, todo := range *todos {
+		status := "Pending"
+		if todo.Completed {
+			status = "Done"
+		}
+
+		dueDate := "N/A"
 		if todo.DueDate != nil {
 			dueDate = todo.DueDate.Format("2006-01-02")
 		}
-		fmt.Printf("%d. [%s] %s %s (Priority: %s)\n", i+1, status, todo.Task, dueDate, todo.Priority)
+
+		fmt.Printf("| %-3d | %-*s | %-10s | %-8s | %-6s |\n",
+			i+1, maxTaskLength, todo.Task, dueDate, todo.Priority, status)
 	}
+
+	fmt.Println(strings.Repeat("-", maxTaskLength+50))
 }
