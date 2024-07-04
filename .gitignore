@@ -40,3 +40,4 @@ todos.json
 # Other project-specific files
 .env
 /main
+/todo-cli
