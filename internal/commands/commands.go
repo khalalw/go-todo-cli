@@ -12,12 +12,12 @@ import (
 var FileToWrite = "todos.json"
 
 // AddCommand adds a new task to the TODO list
-func AddCommand(args []string, dueDate *time.Time, todoList *todo.Todos) {
+func AddCommand(args []string, dueDate *time.Time, priority todo.Priority, todoList *todo.Todos) {
 	if len(args) < 1 {
 		fmt.Println("Usage: add <task>")
 		return
 	}
-	todoList.Add(strings.Join(args, " "), dueDate)
+	todoList.Add(strings.Join(args, " "), dueDate, priority)
 	fmt.Println("Task added.")
 	saveTodoList(todoList)
 }
@@ -75,7 +75,7 @@ func ClearTasksCommand(todoList *todo.Todos) {
 // saveTodoList saves the TODO list to a file
 func saveTodoList(todoList *todo.Todos) {
 	if err := todoList.Save(FileToWrite); err != nil {
-		fmt.Fprintln(os.Stderr, "Error saving todo list:", err)
+		fmt.Fprintln(os.Stderr, "Error saving go-todo-cli list:", err)
 	}
 }
 

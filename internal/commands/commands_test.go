@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 func TestAddCommand(t *testing.T) {
 	todos := &todo.Todos{}
 	dueDate := time.Now().AddDate(0, 0, 1) // Tomorrow
-	AddCommand([]string{"Test task"}, &dueDate, todos)
+	AddCommand([]string{"Test task"}, &dueDate, todo.High, todos)
 	if len(*todos) != 1 {
 		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
@@ -44,6 +44,9 @@ func TestAddCommand(t *testing.T) {
 	}
 	if (*todos)[0].DueDate == nil || !(*todos)[0].DueDate.Equal(dueDate) {
 		t.Errorf("Expected due date '%s', got '%v'", dueDate.Format("2006-01-02"), (*todos)[0].DueDate)
+	}
+	if (*todos)[0].Priority != todo.High {
+		t.Errorf("Expected priority 'high', got '%s'", (*todos)[0].Priority)
 	}
 }
 

@@ -8,19 +8,46 @@ import (
 	"time"
 )
 
+type Priority int
+
+const (
+	Low Priority = iota
+	Medium
+	High
+)
+
+func (p Priority) String() string {
+	return [...]string{"Low", "Medium", "High"}[p]
+}
+
+func ParsePriority(s string) (Priority, error) {
+	switch s {
+	case "low":
+		return Low, nil
+	case "medium":
+		return Medium, nil
+	case "high":
+		return High, nil
+	default:
+		return Low, fmt.Errorf("invalid priority: %s", s)
+	}
+}
+
 type Todo struct {
 	Task      string
 	Completed bool
 	DueDate   *time.Time `json:",omitempty"`
+	Priority  Priority   `json:",omitempty"`
 }
 
 type Todos []Todo
 
-func (t *Todos) Add(task string, dueDate *time.Time) {
-	todo := Todo{Task: task, Completed: false, DueDate: dueDate}
+func (t *Todos) Add(task string, dueDate *time.Time, priority Priority) {
+	todo := Todo{Task: task, Completed: false, DueDate: dueDate, Priority: priority}
 	*t = append(*t, todo)
 }
 
+// Complete marks a task as complete
 func (t *Todos) Complete(index int) error {
 	if index < 0 || index >= len(*t) {
 		return fmt.Errorf("index out of range")
@@ -55,7 +82,10 @@ func (t *Todos) Load(filename string) error {
 
 func Print(todos *Todos) {
 	sort.Slice(*todos, func(i, j int) bool {
-		return (*todos)[i].Task < (*todos)[j].Task
+		if (*todos)[i].Priority == (*todos)[j].Priority {
+			return (*todos)[i].Task < (*todos)[j].Task
+		}
+		return (*todos)[i].Priority > (*todos)[j].Priority
 	})
 
 	for i, todo := range *todos {
@@ -67,6 +97,6 @@ func Print(todos *Todos) {
 		if todo.DueDate != nil {
 			dueDate = todo.DueDate.Format("2006-01-02")
 		}
-		fmt.Printf("%d. [%s] %s %s\n", i+1, status, todo.Task, dueDate)
+		fmt.Printf("%d. [%s] %s %s (Priority: %s)\n", i+1, status, todo.Task, dueDate, todo.Priority)
 	}
 }

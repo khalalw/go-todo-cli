@@ -9,7 +9,7 @@ import (
 func TestAdd(t *testing.T) {
 	todos := &Todos{}
 	dueDate := time.Now().AddDate(0, 0, 1) // Tomorrow
-	todos.Add("Test task", &dueDate)
+	todos.Add("Test task", &dueDate, High)
 	if len(*todos) != 1 {
 		t.Errorf("Expected 1 todo, got %d", len(*todos))
 	}
@@ -18,6 +18,9 @@ func TestAdd(t *testing.T) {
 	}
 	if (*todos)[0].DueDate == nil || !(*todos)[0].DueDate.Equal(dueDate) {
 		t.Errorf("Expected due date '%s', got '%v'", dueDate.Format("2006-01-02"), (*todos)[0].DueDate)
+	}
+	if (*todos)[0].Priority != High {
+		t.Errorf("Expected priority 'high', got '%s'", (*todos)[0].Priority)
 	}
 }
 
