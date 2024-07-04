@@ -1,6 +1,7 @@
 package todo
 
 import (
+	"bytes"
 	"os"
 	"testing"
 )
@@ -136,10 +137,7 @@ func captureOutput(f func()) string {
 	w.Close()
 	os.Stdout = old
 
-	var buf []byte
-	if _, err := r.Read(buf); err != nil {
-		return ""
-	}
-
-	return string(buf)
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	return buf.String()
 }

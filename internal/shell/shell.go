@@ -1,14 +1,15 @@
-package main
+package shell
 
 import (
 	"bufio"
 	"fmt"
-	"go-todo-cli/todo"
+	"go-todo-cli/internal/commands"
+	"go-todo-cli/pkg/todo"
 	"os"
 	"strings"
 )
 
-func startShell(todoList *todo.Todos) {
+func StartShell(todoList *todo.Todos) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Welcome to the TODO CLI. Type 'help' for a list of commands.")
 
@@ -23,6 +24,6 @@ func startShell(todoList *todo.Todos) {
 		args := strings.Split(input, " ")
 		cmd := args[0]
 
-		executeCommand(cmd, args[1:], todoList)
+		commands.ExecuteCommand(cmd, args[1:], todoList)
 	}
 }

@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"go-todo-cli/todo"
+	"go-todo-cli/internal/shell"
+	"go-todo-cli/pkg/todo"
 	"os"
 )
 
@@ -13,7 +14,7 @@ func main() {
 	handleFileLoading(todoList, fileToWrite)
 
 	// Start the interactive shell
-	startShell(todoList)
+	shell.StartShell(todoList)
 
 	// Save changes before exiting
 	if err := todoList.Save(fileToWrite); err != nil {
