@@ -197,3 +197,22 @@ func TestTodosEmpty(t *testing.T) {
 		t.Errorf("Expected 'No tasks' message for empty todo list, but got: %s", output)
 	}
 }
+
+func TestVisualization(t *testing.T) {
+	todos := &Todos{}
+	todos.Add("Task 1", nil, High, nil)
+	todos.Add("Task 2", nil, Medium, nil)
+	todos.Add("Task 3", nil, Low, nil)
+	todos.Add("Task 4", nil, Medium, nil)
+	todos.Complete(0)
+
+	priorityViz := VisualizeTasksByPriority(todos)
+	if !strings.Contains(priorityViz, "High") || !strings.Contains(priorityViz, "Medium") || !strings.Contains(priorityViz, "Low") {
+		t.Errorf("Priority visualization doesn't contain all priority levels")
+	}
+
+	progressViz := VisualizeOverallProgress(todos)
+	if !strings.Contains(progressViz, "25.0%") {
+		t.Errorf("Progress visualization doesn't show correct percentage")
+	}
+}

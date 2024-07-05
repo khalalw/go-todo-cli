@@ -224,6 +224,12 @@ func SearchCommand(args []string, todoList *todo.Todos) {
 	fmt.Printf("No tasks found matching '%s'\n", keyword)
 }
 
+func VisualizeCommand(todoList *todo.Todos) {
+	fmt.Println(todo.VisualizeTasksByPriority(todoList))
+	fmt.Println()
+	fmt.Println(todo.VisualizeOverallProgress(todoList))
+}
+
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
