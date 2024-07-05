@@ -26,6 +26,7 @@ type Args struct {
 	AddTag    []string `arg:"--add-tag" help:"Add a tag to a task: <task_number> <tag>"`
 	RemoveTag []string `arg:"--remove-tag" help:"Remove a tag from a task: <task_number> <tag>"`
 	FilterTag string   `arg:"--filter-tag" help:"Filter tasks by tag"`
+	Search    []string `arg:"--search" help:"Search for tasks containing the given keyword"`
 }
 
 func main() {
@@ -85,6 +86,8 @@ func executeCommand(args Args, todoList *todo.Todos) error {
 		commands.RemoveTagCommand(args.RemoveTag, todoList)
 	case args.FilterTag != "":
 		commands.FilterByTagCommand([]string{args.FilterTag}, todoList)
+	case len(args.Search) > 0:
+		commands.SearchCommand(args.Search, todoList)
 	default:
 		return fmt.Errorf("invalid command. Use --help for usage information")
 	}

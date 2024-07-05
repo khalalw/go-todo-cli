@@ -189,6 +189,41 @@ func FilterByTagCommand(args []string, todoList *todo.Todos) {
 	}
 }
 
+func SearchCommand(args []string, todoList *todo.Todos) {
+	if len(args) == 0 {
+		fmt.Printf("Usage: search <keyword>")
+		return
+	}
+
+	keyword := strings.ToLower(strings.Join(args, " "))
+	results := todo.Todos{}
+
+	for _, task := range *todoList {
+		// check search for task name
+		if strings.Contains(strings.ToLower(task.Task), keyword) {
+			results = append(results, task)
+			continue
+		}
+
+		// filter each task by searching through tags
+		for _, tag := range task.Tags {
+			if strings.Contains(strings.ToLower(tag), keyword) {
+				results = append(results, task)
+				break
+			}
+		}
+	}
+
+	if len(results) > 0 {
+		// print matching tasks and result count
+		fmt.Printf("Found %d matching task(s):\n", len(results))
+		todo.Print(&results)
+		return
+	}
+
+	fmt.Printf("No tasks found matching '%s'\n", keyword)
+}
+
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {

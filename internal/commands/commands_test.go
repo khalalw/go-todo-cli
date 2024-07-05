@@ -332,6 +332,45 @@ func TestFilterByTagCommand(t *testing.T) {
 	}
 }
 
+func TestSearchCommand(t *testing.T) {
+	todoList := &todo.Todos{}
+	now := time.Now()
+	todoList.Add("Buy groceries", &now, todo.Medium, []string{"shopping"})
+	todoList.Add("Finish project", nil, todo.High, []string{"work"})
+	todoList.Add("Call mom", nil, todo.Low, []string{"personal"})
+
+	testCases := []struct {
+		args     []string
+		expected string
+	}{
+		{[]string{"groceries"}, "Buy groceries"},
+		{[]string{"work"}, "Finish project"},
+		{[]string{"personal"}, "Call mom"},
+		{[]string{"nonexistent"}, "No tasks found matching 'nonexistent'"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(strings.Join(tc.args, " "), func(t *testing.T) {
+			old := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			SearchCommand(tc.args, todoList)
+
+			w.Close()
+			os.Stdout = old
+
+			var buf bytes.Buffer
+			io.Copy(&buf, r)
+			output := buf.String()
+
+			if !strings.Contains(output, tc.expected) {
+				t.Errorf("Expected output to contain '%s', but got:\n%s", tc.expected, output)
+			}
+		})
+	}
+}
+
 func stringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
